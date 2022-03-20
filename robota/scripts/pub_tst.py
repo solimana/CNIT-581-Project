@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import rospy
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Int32MultiArray
 import numpy as np
 
 
@@ -8,7 +8,7 @@ def pub_tst_node():
 
 
     # Create a publisher object with Twist
-    pub = rospy.Publisher('motorsA', Float32MultiArray, queue_size=1)
+    pub = rospy.Publisher('motorsA', Int32MultiArray, queue_size=1)
     # Declare the node, and register it with a unique name
     rospy.init_node('pub_tst_node', anonymous=True)
     # Define the execution rate object (10Hz)
@@ -17,8 +17,9 @@ def pub_tst_node():
     # rospy.spin()
     while not rospy.is_shutdown():
 
-        vel_msg = Float32MultiArray()
-        vel_msg.data = np.ones(2)
+        vel_msg = Int32MultiArray()
+        vals = [1000,1000]
+        vel_msg.data = vals
         
         pub.publish(vel_msg)
         rate.sleep()

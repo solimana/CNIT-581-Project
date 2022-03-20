@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import time
 from PCA9685 import PCA9685
 class Motor:

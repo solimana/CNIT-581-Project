@@ -46,7 +46,7 @@ def cont_mot_node():
     # Define the execution rate object (10Hz)
     rate = rospy.Rate(10)
     while not rospy.is_shutdown():
-        rospy.Subscriber("/motorsA", Int32MultiArray, motors_callback)
+        rospy.Subscriber("/motorsB", Int32MultiArray, motors_callback)
         PWM.setMotorModel(motos_arry[0],motos_arry[0],motos_arry[1],motos_arry[1])
         # PWM.setMotorModel(1000,1000,1000,1000) 
         

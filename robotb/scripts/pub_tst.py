@@ -8,7 +8,7 @@ def pub_tst_node():
 
 
     # Create a publisher object with Twist
-    pub = rospy.Publisher('motorsA', Int32MultiArray, queue_size=1)
+    pub = rospy.Publisher('motorsB', Int32MultiArray, queue_size=1)
     # Declare the node, and register it with a unique name
     rospy.init_node('pub_tst_node', anonymous=True)
     # Define the execution rate object (10Hz)

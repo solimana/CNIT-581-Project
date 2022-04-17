@@ -29,35 +29,32 @@ st1pose = rossubscriber("/pos_st1","DataFormat","struct");
    [msg2] = receive(st1pose,10);
    st1 = double(msg2.Data); 
    
-path = [linspace(robposB(3),st1(3),10);linspace(robposB(1),st1(1),10)]';
-% path = float(path)
-    
-%     robposB
-pause(1);
-% path =[0.545157313346863,-0.0526841878890991;0.667452891667684,-0.113302025530073;0.789748469988505,-0.173919863171048;0.912044048309326,-0.234537700812022;1.03433962663015,-0.295155538452996;1.15663520495097,-0.355773376093970;1.27893078327179,-0.416391213734945;1.40122636159261,-0.477009051375919;1.52352193991343,-0.537626889016893;1.64581751823425,-0.598244726657867];
 
- robotInitialLocation = path(1,:);
-robotGoal = path(end,:);  
-% initialOrientation = 0;
-robotCurrentPose = [robotInitialLocation initialOrientation]';
-robot = differentialDriveKinematics("TrackWidth", 0.122, "VehicleInputs", "VehicleSpeedHeadingRate","WheelSpeedRange",[-12 12]);
-figure
-plot(path(:,1), path(:,2),'k--d')
-xlim([-3 3])
-ylim([-3 3])
+pause(1);
+
 
 robotBpub = rospublisher("/motorsB","std_msgs/Int32MultiArray","DataFormat","struct");
 robotBmsg = rosmessage(robotBpub);
 
+C_Robot_Pos = [robposB(3) robposB(1)];
+C_Robot_Angr = initialOrientation;
+
+D_Robot_Pos = [st1(3) st1(1)];
+D_Robot_Angr = 0;
+
+% P controller gains
+k_rho = 0.05;                           %should be larger than 0, i.e, k_rho > 0
+k_alpha = 0.8;                          %k_alpha - k_rho > 0
+k_beta = -0.008;                        %should be smaller than 0, i.e, k_beta < 0
+
+
+d = 0.122;                                 %robot's distance
+
 
 %%
-controller = controllerPurePursuit;
-controller.Waypoints = path;
-controller.DesiredLinearVelocity = 0.5;
-controller.MaxAngularVelocity = 1;
-controller.LookaheadDistance = 0.1;
+
 goalRadius = 0.3;
-distanceToGoal = norm(robotInitialLocation - robotGoal);
+distanceToGoal = norm(C_Robot_Pos - D_Robot_Pos);
 % Initialize the simulation loop
 sampleTime = 0.1;
 vizRate = rateControl(1/sampleTime);
@@ -66,18 +63,12 @@ vizRate = rateControl(1/sampleTime);
 figure
 
 % Determine vehicle frame size to most closely represent vehicle with plotTransforms
-frameSize = robot.TrackWidth/0.8;
+frameSize = .2;
 % plot(4,6,'*','LineWidth',5)
 hold on
 while( distanceToGoal > goalRadius )
-%     robotCurrentPose = [robposB(1);robposB(3);atan2(robposB(3),robposB(1))]
-    % Compute the controller outputs, i.e., the inputs to the robot
-%     robotposeB = rossubscriber("/pos_robB",@savepos_robposB,"DataFormat","struct");
-%     global robposB
-distanceToGoal 
-%     robotposeB = rossubscriber("/pos_robB","DataFormat","struct");
-%     st1pose = rossubscriber("/pos_st1","DataFormat","struct");
 
+distanceToGoal 
 
    [msg2] = receive(robotposeB,10);
    robposB = double(msg2.Data);
@@ -89,29 +80,54 @@ distanceToGoal
    robotposeB_orv = double([msg2.Pose.Orientation.X msg2.Pose.Orientation.Y msg2.Pose.Orientation.Z msg2.Pose.Orientation.W]);
    robotposeB_orv = rad2deg(quat2eul(robotposeB_orv,'XYZ'));
     corientation = deg2rad(robotposeB_orv(2));
-%     corientation = 0.6;
-    [v, omega] = controller(robotCurrentPose);
-%      https://www.mathworks.com/help/robotics/ug/control-a-differential-drive-robot-in-simulink-and-gazebo.html
-%     [v, omega]
-    % Get the robot's velocity using controller inputs
-    phi_l = (1/(0.065))*(v+omega*0.122/2);
-    phi_r = (1/(0.065))*(v-omega*0.122/2);
-    vel = derivative(robot, robotCurrentPose, [v omega]);
+
     
-    % Update the current pose
-%     robotCurrentPose = robotCurrentPose + vel*sampleTime; 
-        robotCurrentPose = [robposB(3);robposB(1);corientation];
+    
+
+        C_Robot_Pos = [robposB(3);robposB(1);corientation];
+        
+        delta_x = D_Robot_Pos(1) - C_Robot_Pos(1);
+    delta_y = D_Robot_Pos(2) - C_Robot_Pos(2);
+    rho = sqrt(delta_x^2+delta_y^2);    %distance between the center of the robot's wheel axle and the goal position.
+    alpha = -C_Robot_Angr+atan2(delta_y,delta_x); %angle between the robot's current direction and the vector connecting the center of the axle of the sheels with the final position.
+    
+    %limit alpha range from -180 degree to +180
+    if rad2deg(alpha) > 180
+        temp_alpha = rad2deg(alpha) - 360;
+        alpha = deg2rad(temp_alpha);
+    elseif rad2deg(alpha) < -180
+        temp_alpha = rad2deg(alpha) + 360;
+        alpha = deg2rad(temp_alpha);
+    end
+    
+    beta = -C_Robot_Angr-alpha;
+    
+    % P controller
+    v = k_rho*rho;
+    w = k_alpha*alpha + k_beta*beta;
+    vL = v + d/2*w
+    vR = v - d/2*w;
+    
+%         posr = [C_Robot_Pos C_Robot_Angr];
+    posr = drive(posr, d, vL, vR, dt, posr(3)); %determine new position
+    
+%     vel_data(j,:) = [vL vR];    
+%     j=j+1;
+%      posr = [robposB(3);robposB(1);corientation];
+    robotCurrentPose = posr;
+    C_Robot_Pos = [posr(1) posr(2)];
+    C_Robot_Angr = posr(3);
 
 %     robotCurrentPose
     % Re-compute the distance to the goal
-    distanceToGoal = norm(robotCurrentPose(1:2) - robotGoal(:));
+    distanceToGoal = norm(robotCurrentPose(1:2) - D_Robot_Pos(:));
     
     % Update the plot
     hold off
     
     % Plot path each instance so that it stays persistent while robot mesh
     % moves
-    plot(path(:,1), path(:,2),"k--d")
+%     plot(path(:,1), path(:,2),"k--d")
 
     hold all
 %         plot(4,6,'*','LineWidth',5)
@@ -122,11 +138,11 @@ distanceToGoal
     plotRot = axang2quat([0 0 robotCurrentPose(3) 1]);
     plotTransforms(plotTrVec', plotRot, "MeshFilePath", "groundvehicle.stl", "Parent", gca, "View","2D", "FrameSize", frameSize);
     light;
-xlim([-3 3])
-ylim([-3 3])
+    xlim([-3 3])
+    ylim([-3 3])
     
-    vl_command = (floor(phi_l*2095/12));
-    vr_command = (floor(phi_r*2095/12));
+    vl_command = (floor(vL*10095))
+    vr_command = (floor(vR*10095))
     robotBmsg.Data = int32([vl_command,vr_command]);
     
     send(robotBpub,robotBmsg);

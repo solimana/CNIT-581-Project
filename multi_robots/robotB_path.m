@@ -1,21 +1,28 @@
-function robotA_move(goal)
+function done = robotB_path(goal)
+rosshutdown
+rosinit('192.168.1.7')
 
-robotposeA = rossubscriber("/pos_robA","DataFormat","struct");  
-[msg2] = receive(robotposeA,10);
-robposA = double(msg2.Data); 
+for i=1:length(goal)
+    
+    goal = goal(i);
 
-robotposeA_or = rossubscriber("/qualisys/robotA/pose","DataFormat","struct");       
-[msg2] = receive(robotposeA_or,10);
-robotposeA_orv = double([msg2.Pose.Orientation.X msg2.Pose.Orientation.Y msg2.Pose.Orientation.Z msg2.Pose.Orientation.W]);
-robotposeA_orv = rad2deg(quat2eul(robotposeA_orv,'XYZ'));
+robotposeB = rossubscriber("/pos_robB","DataFormat","struct");  
+[msg2] = receive(robotposeB,10);
+robposB = double(msg2.Data); 
+
+robotposeB_or = rossubscriber("/qualisys/robotB/pose","DataFormat","struct");       
+[msg2] = receive(robotposeB_or,10);
+robotposeB_orv = double([msg2.Pose.Orientation.X msg2.Pose.Orientation.Y msg2.Pose.Orientation.Z msg2.Pose.Orientation.W]);
+robotposeB_orv = rad2deg(quat2eul(robotposeB_orv,'XYZ'));
    
-initialOrientation = deg2rad(robotposeA_orv(2)+90);
-C_Robot_Pos = [robposA(3) robposA(1)];
+initialOrientation = deg2rad(robotposeB_orv(2)+90);
+C_Robot_Pos = [robposB(3) robposB(1)];
 C_Robot_Angr = initialOrientation;
 % initialOrientation = deg2rad(90);
 
 
 goals = ["/pos_st1";"/pos_st2";"/pos_st3";"/pos_st4";"/pos_st5"];
+pause_times = [1;2;3;4;4];
 
 goalpose = rossubscriber(goals(goal),"DataFormat","struct");
    [msg2] = receive(goalpose,10);
@@ -26,12 +33,12 @@ pause(1);
 
 
 
-drawbotn([C_Robot_Pos C_Robot_Angr], .1, 1);
-hold on
+% drawbotn([C_Robot_Pos C_Robot_Angr], .1, 1);
+% hold on
 
 D_Robot_Pos = [goalposed(3) goalposed(1)];
 D_Robot_Angr = 0;
-drawbotn([D_Robot_Pos D_Robot_Angr], .1, 1);
+% drawbotn([D_Robot_Pos D_Robot_Angr], .1, 1);
 
 % P controller gains
 k_rho = 1;                           %should be larger than 0, i.e, k_rho > 0
@@ -42,8 +49,8 @@ k_beta = -0.008;                        %should be smaller than 0, i.e, k_beta <
 d = 0.122;                                 %robot's distance
 dt = .1;                                %timestep between driving and collecting sensor data
 
-robotApub = rospublisher("/motorsA","std_msgs/Int32MultiArray","DataFormat","struct");
-robotAmsg = rosmessage(robotApub);
+obotBpub = rospublisher("/motorsB","std_msgs/Int32MultiArray","DataFormat","struct");
+robotBmsg = rosmessage(robotBpub);
 
 goalRadius = 0.3;
 distanceToGoal = norm(C_Robot_Pos - D_Robot_Pos);
@@ -75,37 +82,37 @@ while( distanceToGoal > goalRadius )
     
     vl_command = (floor(vL*800));
     vr_command = (floor(vR*800));
-    robotAmsg.Data = int32([vl_command,vr_command]);
+    robotBmsg.Data = int32([vl_command,vr_command]);
     
-    send(robotApub,robotAmsg);
+    send(robotBpub,robotBmsg);
     
     
     
         
-   [msg2] = receive(robotposeA,10);
-   robposA = double(msg2.Data);
+   [msg2] = receive(robotposeB,10);
+   robposB = double(msg2.Data);
       
-    [msg2] = receive(robotposeA_or,10);
-   robotposeA_orv = double([msg2.Pose.Orientation.X msg2.Pose.Orientation.Y msg2.Pose.Orientation.Z msg2.Pose.Orientation.W]);
-   robotposeA_orv = rad2deg(quat2eul(robotposeA_orv,'XYZ'));
-   corientation = deg2rad(robotposeA_orv(2)+90);
+    [msg2] = receive(robotposeB_or,10);
+   robotposeB_orv = double([msg2.Pose.Orientation.X msg2.Pose.Orientation.Y msg2.Pose.Orientation.Z msg2.Pose.Orientation.W]);
+   robotposeB_orv = rad2deg(quat2eul(robotposeB_orv,'XYZ'));
+   corientation = deg2rad(robotposeB_orv(2)+90);
    
-   posr = [robposA(3);robposA(1);corientation];
+   posr = [robposB(3);robposB(1);corientation];
     
 %     posr = [C_Robot_Pos C_Robot_Angr];
 %     posr = drive(posr, d, vL, vR, dt, posr(3)); %determine new position
-    drawbotn(posr, .1, 1);
+%     drawbotn(posr, .1, 1);
     C_Robot_Pos = [posr(1) posr(2)];
     C_Robot_Angr = corientation;
     pause(0.01); % if you notice any lagging, try to increase pause time a bit, e.g., 0.05 -> 0.1
     
-       distanceToGoal = norm(C_Robot_Pos(:) - D_Robot_Pos(:));
+    distanceToGoal = norm(C_Robot_Pos(:) - D_Robot_Pos(:));
 
 end
-    robotAmsg.Data = int32([0,0]);
+    robotBmsg.Data = int32([0,0]);
     
-    send(robotApub,robotAmsg);
-    pause(1);
-    close all
+    send(robotBpub,robotBmsg);
+    pause(pause_times(goal(i)));
+
 
 end

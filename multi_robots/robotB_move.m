@@ -1,4 +1,6 @@
 function robotB_move(goal)
+rosshutdown
+rosinit('192.168.1.7')
 
 robotposeB = rossubscriber("/pos_robB","DataFormat","struct");  
 [msg2] = receive(robotposeB,10);

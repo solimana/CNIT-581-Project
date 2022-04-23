@@ -102,7 +102,7 @@ distanceToGoal
    posr = [robposA(3);robposA(1);corientation];
     
 
-    drawbotn(posr, .1, 1);
+%     drawbotn(posr, .1, 1);
     C_Robot_Pos = [posr(1) posr(2)];
     C_Robot_Angr = corientation;
     plotTransforms(C_Robot_Pos', "MeshFilePath", "groundvehicle.stl", "Parent", gca, "View","2D", "FrameSize", 0.2);

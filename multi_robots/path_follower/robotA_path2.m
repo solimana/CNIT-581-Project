@@ -1,15 +1,42 @@
-function done = robotA_path(goal)
+% robotAgoalspub = rospublisher("/Agoals","std_msgs/Int32MultiArray","DataFormat","struct");
+% robotAgoalms = rosmessage(robotAgoalspub);
+% robotAgoalms.Data = int32([0.0]);
+% send(robotAgoalspub, robotAgoalms);
+clear
+clc
+
+
 rosshutdown
 rosinit('192.168.1.7')
+goalsa = rossubscriber("/Agoals","DataFormat","struct");  
+robotAstatuspub = rospublisher("/Astatus","std_msgs/Int32","DataFormat","struct");
+robotAgoalspub = rospublisher("/Agoals","std_msgs/Int32MultiArray","DataFormat","struct");
+robotAgoalspubms = rosmessage(robotAgoalspub);
 
 
-% parfeval(@robotA_move,1,)
-robotAgoal = rospublisher("/Agoal","std_msgs/Int32","DataFormat","struct");
-robotAgoalms = rosmessage(robotAgoal);
+while(1)
+    
+
+% here1 = 1
+try
+    [msg2] = receive(goalsa, 3);
+    goalsa_d = double(msg2.Data)
+catch
+    goalsa_d = 0;
+end
+% here2 = 2
 
 
-for i=1:length(goal)
-goal = goal(i);
+robotAgoalms = rosmessage(robotAstatuspub);
+
+x = goalsa_d(1)
+
+if goalsa_d(1) ~= 0
+    
+
+for i=1:length(goalsa_d)
+goal = goalsa_d(i)
+
 
 
 robotposeA = rossubscriber("/pos_robA","DataFormat","struct");  
@@ -36,7 +63,7 @@ pause(1);
 
 
 
-
+% 
 % drawbotn([C_Robot_Pos C_Robot_Angr], .1, 1);
 % hold on
 
@@ -46,8 +73,8 @@ D_Robot_Angr = 0;
 
 % P controller gains
 k_rho = 1;                           %should be larger than 0, i.e, k_rho > 0
-k_alpha = 25;                          %k_alpha - k_rho > 0
-k_beta = -0.008;                        %should be smaller than 0, i.e, k_beta < 0
+k_alpha = 50;                          %k_alpha - k_rho > 0
+k_beta = -0.0028;                        %should be smaller than 0, i.e, k_beta < 0
 
 
 d = 0.122;                                 %robot's distance
@@ -56,14 +83,14 @@ dt = .1;                                %timestep between driving and collecting
 robotApub = rospublisher("/motorsA","std_msgs/Int32MultiArray","DataFormat","struct");
 robotAmsg = rosmessage(robotApub);
 
-goalRadius = 0.3;
+goalRadius = 0.4;
 distanceToGoal = norm(C_Robot_Pos - D_Robot_Pos);
 
 %%
 while( distanceToGoal > goalRadius )
 % distanceToGoal
 robotAgoalms.Data = int32(goal);
-send(robotAgoal,robotAgoalms);
+send(robotAstatuspub,robotAgoalms);
     delta_x = D_Robot_Pos(1) - C_Robot_Pos(1);
     delta_y = D_Robot_Pos(2) - C_Robot_Pos(2);
     rho = sqrt(delta_x^2+delta_y^2);    %distance between the center of the robot's wheel axle and the goal position.
@@ -86,8 +113,8 @@ send(robotAgoal,robotAgoalms);
     vL = v + d/2*w;
     vR = v - d/2*w;
     
-    vl_command = (floor(vL*800));
-    vr_command = (floor(vR*800));
+    vl_command = (floor(vL*900));
+    vr_command = (floor(vR*900));
     robotAmsg.Data = int32([vl_command,vr_command]);
     
     send(robotApub,robotAmsg);
@@ -114,16 +141,40 @@ send(robotAgoal,robotAgoalms);
        distanceToGoal = norm(C_Robot_Pos(:) - D_Robot_Pos(:));
 
 end
+
     robotAmsg.Data = int32([0,0]);
     
     send(robotApub,robotAmsg);
-    pause(pause_times(goal(i)));
+    pause(pause_times(goal));
     close all
   
 
 end
-  done =1 ;
+  done =1   
+
+   for i = 1:100
+  robotAgoalms.Data = int32(0)
+    send(robotAstatuspub,robotAgoalms);
+    
+    robotAgoalspubms.Data = int32([0,0]);
+    send(robotAgoalspub,robotAgoalspubms);
+    pause(0.01);
+    end
+
+else  
+    inhere = 1
+     robotAgoalms.Data = int32(0)
+    send(robotAstatuspub,robotAgoalms);
+    
+        robotAgoalspubms.Data = int32([0,0]);
+    send(robotAgoalspub,robotAgoalspubms);
+%     pause(1);
 end
+
+
+end
+    
+
 
 
 

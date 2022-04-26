@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
 import rospy
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Float32MultiArray 
+from std_msgs.msg import Int32
+
 import numpy as np
 from geometry_msgs.msg import PoseStamped
 
@@ -19,23 +21,23 @@ robotb = [0.0,0.0,0.0]
 
 def st1pos_callback(data):
     global st1_pos
-    st1_pos = [data.pose.position.x,data.pose.position.y,data.pose.position.z]
+    st1_pos = [data.pose.position.x,data.pose.position.y,data.pose.position.z-0.25]
 
 def st2pos_callback(data):
     global st2_pos
-    st2_pos = [data.pose.position.x,data.pose.position.y,data.pose.position.z]
+    st2_pos = [data.pose.position.x,data.pose.position.y,data.pose.position.z-0.25]
 
 def st3pos_callback(data):
     global st3_pos
-    st3_pos = [data.pose.position.x,data.pose.position.y,data.pose.position.z]
+    st3_pos = [data.pose.position.x-0.25,data.pose.position.y,data.pose.position.z-0.1]
 
 def st4pos_callback(data):
     global st4_pos
-    st4_pos = [data.pose.position.x,data.pose.position.y,data.pose.position.z]
+    st4_pos = [data.pose.position.x,data.pose.position.y,data.pose.position.z+0.35]
 
 def st5pos_callback(data):
     global st5_pos
-    st5_pos = [data.pose.position.x,data.pose.position.y,data.pose.position.z]    
+    st5_pos = [data.pose.position.x,data.pose.position.y,data.pose.position.z+0.25]    
 
 def robota_callback(data):
     global robota
@@ -58,15 +60,24 @@ def pos_Sub():
     pub_st5 = rospy.Publisher('pos_st5', Float32MultiArray, queue_size=1)
     pub_robA = rospy.Publisher('pos_robA', Float32MultiArray, queue_size=1)
     pub_robB = rospy.Publisher('pos_robB', Float32MultiArray, queue_size=1)
+    Astatus_pub = rospy.Publisher('Astatus', Int32, queue_size=1)
+    Bstatus_pub = rospy.Publisher('Bstatus', Int32, queue_size=1)
 
     # Define the execution rate object (10Hz)
     rate = rospy.Rate(10)
+    Astatus = Int32()
+    Bstatus = Int32()
+    Astatus.data = 100
+    Bstatus.data = 100
+    Astatus_pub.publish(Astatus)
+    Bstatus_pub.publish(Bstatus)
+
     while not rospy.is_shutdown():
-        rospy.Subscriber("/qualisys/st1/pose", PoseStamped, st1pos_callback)
-        rospy.Subscriber("/qualisys/st2/pose", PoseStamped, st2pos_callback)
-        rospy.Subscriber("/qualisys/st3/pose", PoseStamped, st3pos_callback)
-        rospy.Subscriber("/qualisys/st4/pose", PoseStamped, st4pos_callback)
-        rospy.Subscriber("/qualisys/st5/pose", PoseStamped, st5pos_callback)
+        rospy.Subscriber("/qualisys/st11/pose", PoseStamped, st1pos_callback)
+        rospy.Subscriber("/qualisys/st222/pose", PoseStamped, st2pos_callback)
+        rospy.Subscriber("/qualisys/st33/pose", PoseStamped, st3pos_callback)
+        rospy.Subscriber("/qualisys/st44/pose", PoseStamped, st4pos_callback)
+        rospy.Subscriber("/qualisys/st55/pose", PoseStamped, st5pos_callback)
         rospy.Subscriber("/qualisys/robotA/pose", PoseStamped, robota_callback)
         rospy.Subscriber("/qualisys/robotB/pose", PoseStamped, robotb_callback)
 
@@ -80,6 +91,7 @@ def pos_Sub():
         robB_msg = Float32MultiArray()
 
 
+
         st1_msg.data= st1_pos
         st2_msg.data= st2_pos
         st3_msg.data= st3_pos
@@ -89,6 +101,8 @@ def pos_Sub():
         robB_msg.data= robotb
 
 
+
+
         pub_st1.publish(st1_msg)
         pub_st2.publish(st2_msg)
         pub_st3.publish(st3_msg)
@@ -96,6 +110,9 @@ def pos_Sub():
         pub_st5.publish(st5_msg)
         pub_robA.publish(robA_msg)
         pub_robB.publish(robB_msg)
+
+
+
 
 
         # PWM.setMotorModel(motos_arry[0],motos_arry[0],motos_arry[1],motos_arry[1])
